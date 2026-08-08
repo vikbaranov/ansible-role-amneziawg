@@ -1,0 +1,31 @@
+---
+# tasks/service.yml - Manage AmneziaWG service state
+
+- name: Enable AmneziaWG service
+  ansible.builtin.systemd:
+    name: 'amneziawg@{{ amneziawg_interface }}'
+    enabled: '{{ amneziawg_service_enabled }}'
+  become: true
+  tags:
+    - amneziawg
+
+- name: Start AmneziaWG service
+  ansible.builtin.systemd:
+    name: 'amneziawg@{{ amneziawg_interface }}'
+    state: '{{ amneziawg_service_state }}'
+  become: true
+  tags:
+    - amneziawg
+
+- name: Verify service is running
+  ansible.builtin.command:
+    cmd: systemctl is-active amneziawg@{{ amneziawg_interface }}
+  register: amneziawg__service_check
+  changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: amneziawg__service_check.rc == 0
+  become: true
+  tags:
+    - amneziawg

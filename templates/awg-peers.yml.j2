@@ -1,0 +1,13 @@
+---
+# AmneziaWG peer definitions for {{ inventory_hostname }}
+# Managed by Ansible amneziawg role — do not edit manually
+
+amneziawg_unmanaged_peers:
+{% for peer_name, peer in amneziawg__peers.items() %}
+  {{ peer_name }}:
+    public_key: {{ peer.public_key }}
+    allowed_ips: {{ peer.allowed_ips }}
+{% if peer.preshared_key is defined and peer.preshared_key | length > 0 %}
+    preshared_key: {{ peer.preshared_key }}
+{% endif %}
+{% endfor %}

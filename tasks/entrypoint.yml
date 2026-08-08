@@ -1,0 +1,13 @@
+---
+# tasks/entrypoint.yml - Deploy AmneziaWG container entrypoint
+
+- name: Deploy entrypoint script
+  ansible.builtin.template:
+    src: amneziawg-entrypoint.sh.j2
+    dest: /usr/local/bin/amneziawg-entrypoint.sh
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags:
+    - amneziawg-install

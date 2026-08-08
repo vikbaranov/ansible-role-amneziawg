@@ -1,0 +1,62 @@
+---
+# tasks/keys.yml - Generate or validate AmneziaWG keypair
+
+- name: Check if private key is provided
+  ansible.builtin.set_fact:
+    amneziawg__key_provided: "{{ amneziawg_private_key | default('') | length > 0 }}"
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+- name: Generate private key
+  when: not amneziawg__key_provided
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm {{ amneziawg_image }}
+      awg genkey
+  register: amneziawg__gen_privkey
+  changed_when: false
+  check_mode: false
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+- name: Set private key fact (provided)
+  when: amneziawg__key_provided
+  ansible.builtin.set_fact:
+    amneziawg__fact_private_key: "{{ amneziawg_private_key }}"
+  no_log: true
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+- name: Set private key fact (generated)
+  when: not amneziawg__key_provided
+  ansible.builtin.set_fact:
+    amneziawg__fact_private_key: "{{ amneziawg__gen_privkey.stdout }}"
+  no_log: true
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+- name: Derive public key from private key
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm -i {{ amneziawg_image }}
+      awg pubkey
+  args:
+    stdin: "{{ amneziawg__fact_private_key }}"
+  register: amneziawg__gen_pubkey
+  changed_when: false
+  check_mode: false
+  no_log: true
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+- name: Set public key fact
+  ansible.builtin.set_fact:
+    amneziawg__fact_public_key: "{{ amneziawg__gen_pubkey.stdout }}"
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients

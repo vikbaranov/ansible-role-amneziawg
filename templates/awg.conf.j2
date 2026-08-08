@@ -1,0 +1,75 @@
+# {{ ansible_managed }}
+# AmneziaWG configuration for {{ inventory_hostname }}
+
+[Interface]
+Address = {{ amneziawg_addresses | join(', ') }}
+ListenPort = {{ amneziawg_port }}
+PrivateKey = {{ amneziawg__fact_private_key }}
+{% if amneziawg_dns is defined and amneziawg_dns %}
+DNS = {{ amneziawg_dns }}
+{% endif %}
+{% if amneziawg_mtu is defined and amneziawg_mtu %}
+MTU = {{ amneziawg_mtu }}
+{% endif %}
+{% if amneziawg_fwmark is defined and amneziawg_fwmark %}
+FwMark = {{ amneziawg_fwmark }}
+{% endif %}
+{% if amneziawg_table is defined and amneziawg_table %}
+Table = {{ amneziawg_table }}
+{% endif %}
+{% if amneziawg_jc | int > 0 %}
+Jc = {{ amneziawg_jc }}
+{% endif %}
+{% if amneziawg_jmin | int > 0 %}
+Jmin = {{ amneziawg_jmin }}
+{% endif %}
+{% if amneziawg_jmax | int > 0 %}
+Jmax = {{ amneziawg_jmax }}
+{% endif %}
+{% if amneziawg_s1 | int > 0 %}
+S1 = {{ amneziawg_s1 }}
+{% endif %}
+{% if amneziawg_s2 | int > 0 %}
+S2 = {{ amneziawg_s2 }}
+{% endif %}
+{% if amneziawg_h1 | int > 0 or (amneziawg_h1 is string and '-' in amneziawg_h1) %}
+H1 = {{ amneziawg_h1 }}
+{% endif %}
+{% if amneziawg_h2 | int > 0 or (amneziawg_h2 is string and '-' in amneziawg_h2) %}
+H2 = {{ amneziawg_h2 }}
+{% endif %}
+{% if amneziawg_h3 | int > 0 or (amneziawg_h3 is string and '-' in amneziawg_h3) %}
+H3 = {{ amneziawg_h3 }}
+{% endif %}
+{% if amneziawg_h4 | int > 0 or (amneziawg_h4 is string and '-' in amneziawg_h4) %}
+H4 = {{ amneziawg_h4 }}
+{% endif %}
+{% if amneziawg_preup is defined and amneziawg_preup %}
+{% for cmd in amneziawg_preup %}
+PreUp = {{ cmd }}
+{% endfor %}
+{% endif %}
+
+{% for peer_name, peer in amneziawg__all_peers.items() %}
+[Peer]
+# {{ peer_name }}
+PublicKey = {{ peer.public_key }}
+{% set peer_psk = peer.preshared_key | default('') | trim %}
+{% if peer_psk | length > 0 %}
+PresharedKey = {{ peer_psk }}
+{% endif %}
+{% if peer.allowed_ips is defined %}
+AllowedIPs = {{ peer.allowed_ips }}
+{% elif peer.addresses is defined %}
+AllowedIPs = {{ peer.addresses | map('regex_replace', '/\\d+$', '/32') | join(', ') }}
+{% endif %}
+{% if peer.endpoint is defined and peer.endpoint %}
+Endpoint = {{ peer.endpoint }}:{{ peer.port | default(amneziawg_port) }}
+{% endif %}
+{% if peer.persistent_keepalive is defined and peer.persistent_keepalive %}
+PersistentKeepalive = {{ peer.persistent_keepalive }}
+{% elif peer.endpoint is not defined or not peer.endpoint %}
+PersistentKeepalive = 25
+{% endif %}
+
+{% endfor %}

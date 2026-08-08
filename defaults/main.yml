@@ -1,0 +1,71 @@
+---
+# defaults/main.yml - Default variables for amneziawg role
+
+# ── Role state ──────────────────────────────────────────────────────
+amneziawg_state: 'present'          # present | absent
+
+# ── Client management ───────────────────────────────────────────────
+amneziawg_client_action: ''         # add | remove | '' (server-only)
+amneziawg_client_name: ''
+amneziawg_client_address: ''        # auto-assigned from subnet if empty
+amneziawg_client_dns: '1.1.1.1'
+amneziawg_show_qr: false
+
+# ── Uninstall options ───────────────────────────────────────────────
+amneziawg_remove_docker_image: true
+amneziawg_remove_configs: true
+
+# ── Docker image ────────────────────────────────────────────────────
+amneziawg_version: 'v3.0.20260805'
+amneziawg_image: 'docker.io/amneziavpn/amneziawg-go:{{ amneziawg_version | replace("v", "") }}'
+
+# ── Interface settings ──────────────────────────────────────────────
+amneziawg_interface: 'awg0'
+amneziawg_port: '51820'
+amneziawg_remote_directory: '/etc/amnezia/amneziawg'
+amneziawg_conf_owner: 'root'
+amneziawg_conf_group: 'root'
+amneziawg_conf_mode: '0600'
+amneziawg_conf_backup: false
+
+# ── Service settings ────────────────────────────────────────────────
+amneziawg_service_enabled: true
+amneziawg_service_state: 'started'
+
+# ── Per-host settings (typically set in host_vars) ──────────────────
+# amneziawg_addresses: []           # Required: VPN IP addresses with CIDR
+# amneziawg_endpoint: ''            # Public endpoint (empty = spoke)
+# amneziawg_private_key: ''         # Auto-generated if empty (use vault)
+# amneziawg_preshared_key: ''       # Optional PSK for peer encryption
+# amneziawg_allowed_ips: ''         # Custom AllowedIPs override
+# amneziawg_persistent_keepalive: '25'
+# amneziawg_dns: ''
+# amneziawg_mtu: ''
+# amneziawg_fwmark: ''
+# amneziawg_table: ''
+# amneziawg_preup: []
+# amneziawg_postup: []
+# amneziawg_predown: []
+# amneziawg_postdown: []
+
+# ── Topology ────────────────────────────────────────────────────────
+amneziawg_as_spoke: false
+
+# ── Obfuscation parameters (define in group_vars) ───────────────────
+amneziawg_jc: 0
+amneziawg_jmin: 0
+amneziawg_jmax: 0
+amneziawg_s1: 0
+amneziawg_s2: 0
+amneziawg_h1: 0
+amneziawg_h2: 0
+amneziawg_h3: 0
+amneziawg_h4: 0
+
+# ── Host iptables commands (run outside container via ExecStartPost) ─
+amneziawg_postup: []
+amneziawg_predown: []
+amneziawg_postdown: []
+
+# ── Unmanaged peers ─────────────────────────────────────────────────
+amneziawg_unmanaged_peers: {}

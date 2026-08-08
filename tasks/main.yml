@@ -1,0 +1,104 @@
+---
+# tasks/main.yml - Main entry point
+
+- name: Validate role state
+  ansible.builtin.assert:
+    that:
+      - amneziawg_state in ['present', 'absent']
+    fail_msg: "amneziawg_state must be 'present' or 'absent'"
+    quiet: true
+  tags:
+    - amneziawg
+
+- name: Install and configure AmneziaWG
+  when: amneziawg_state == 'present'
+  block:
+    - name: Validate required server variables
+      ansible.builtin.assert:
+        that:
+          - amneziawg_addresses is defined
+          - amneziawg_addresses | length > 0
+        fail_msg: "amneziawg_addresses must be defined with at least one VPN address"
+        quiet: true
+      tags:
+        - amneziawg-config
+
+    - name: Ensure Docker is available
+      ansible.builtin.include_tasks:
+        file: docker.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    - name: Ensure AmneziaWG image is available
+      ansible.builtin.include_tasks:
+        file: image.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    - name: Deploy AmneziaWG entrypoint
+      ansible.builtin.include_tasks:
+        file: entrypoint.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    - name: Deploy AmneziaWG systemd unit
+      ansible.builtin.include_tasks:
+        file: systemd.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    - name: Generate AmneziaWG keys
+      ansible.builtin.include_tasks:
+        file: keys.yml
+      tags:
+        - amneziawg
+        - amneziawg-keys
+        - amneziawg-clients
+
+    - name: Assemble peer list
+      ansible.builtin.include_tasks:
+        file: peers.yml
+      tags:
+        - amneziawg
+        - amneziawg-config
+
+    - name: Configure host forwarding
+      ansible.builtin.include_tasks:
+        file: sysctl.yml
+      tags:
+        - amneziawg
+        - amneziawg-config
+
+    - name: Deploy AmneziaWG configuration
+      ansible.builtin.include_tasks:
+        file: config.yml
+      tags:
+        - amneziawg
+        - amneziawg-config
+
+    - name: Manage AmneziaWG service
+      ansible.builtin.include_tasks:
+        file: service.yml
+      tags:
+        - amneziawg
+        - amneziawg-config
+
+    - name: Manage AmneziaWG clients
+      ansible.builtin.include_tasks:
+        file: clients.yml
+      when: amneziawg_client_action | default('') | length > 0
+      tags:
+        - amneziawg
+        - amneziawg-clients
+
+- name: Remove AmneziaWG
+  when: amneziawg_state == 'absent'
+  ansible.builtin.include_tasks:
+    file: uninstall.yml
+  tags:
+    - amneziawg
+    - amneziawg-uninstall

@@ -1,0 +1,43 @@
+---
+# tasks/docker.yml - Ensure Docker package and service are available
+
+- name: Check if Docker is installed
+  ansible.builtin.command:
+    cmd: which docker
+  register: amneziawg__docker_check
+  failed_when: false
+  changed_when: false
+  tags:
+    - amneziawg-install
+
+- name: Install Docker (Debian family)
+  when:
+    - amneziawg__docker_check.rc != 0
+    - ansible_os_family == 'Debian'
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - amneziawg-install
+
+- name: Install Docker (RedHat family)
+  when:
+    - amneziawg__docker_check.rc != 0
+    - ansible_os_family == 'RedHat'
+  ansible.builtin.dnf:
+    name: docker
+    state: present
+  become: true
+  tags:
+    - amneziawg-install
+
+- name: Ensure Docker service is running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+  become: true
+  tags:
+    - amneziawg-install

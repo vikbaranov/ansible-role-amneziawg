@@ -1,0 +1,26 @@
+---
+# tasks/config.yml - Deploy AmneziaWG interface configuration
+
+- name: Create configuration directory
+  ansible.builtin.file:
+    path: '{{ amneziawg_remote_directory }}'
+    state: directory
+    owner: '{{ amneziawg_conf_owner }}'
+    group: '{{ amneziawg_conf_group }}'
+    mode: '0700'
+  become: true
+  tags:
+    - amneziawg-config
+
+- name: Deploy AmneziaWG configuration
+  ansible.builtin.template:
+    src: awg.conf.j2
+    dest: '{{ amneziawg_remote_directory }}/{{ amneziawg_interface }}.conf'
+    owner: '{{ amneziawg_conf_owner }}'
+    group: '{{ amneziawg_conf_group }}'
+    mode: '{{ amneziawg_conf_mode }}'
+    backup: '{{ amneziawg_conf_backup }}'
+  become: true
+  notify: Reconfigure amneziawg
+  tags:
+    - amneziawg-config

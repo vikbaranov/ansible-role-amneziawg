@@ -1,0 +1,9 @@
+---
+# handlers/main.yml - AmneziaWG service handlers
+
+- name: Restart amneziawg
+  ansible.builtin.systemd:
+    name: 'amneziawg@{{ amneziawg_interface }}'
+    state: restarted
+  become: true
+  listen: Reconfigure amneziawg

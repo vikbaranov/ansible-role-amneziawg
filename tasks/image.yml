@@ -1,0 +1,21 @@
+---
+# tasks/image.yml - Ensure the AmneziaWG Docker image exists locally
+
+- name: Check if AmneziaWG Docker image exists
+  ansible.builtin.command:
+    cmd: docker image inspect {{ amneziawg_image }}
+  register: amneziawg__image_check
+  failed_when: false
+  changed_when: false
+  tags:
+    - amneziawg-install
+
+- name: Pull AmneziaWG Docker image
+  when: amneziawg__image_check.rc != 0
+  ansible.builtin.command:
+    cmd: docker pull {{ amneziawg_image }}
+  register: amneziawg__pull_result
+  changed_when: "'Downloaded newer image' in amneziawg__pull_result.stdout or 'Pull complete' in amneziawg__pull_result.stdout"
+  become: true
+  tags:
+    - amneziawg-install

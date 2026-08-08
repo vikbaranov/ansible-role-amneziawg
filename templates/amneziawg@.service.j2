@@ -1,0 +1,40 @@
+[Unit]
+Description=AmneziaWG Docker container for %i
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f %i
+ExecStart=/usr/bin/docker run \
+    --name %i \
+    --network host \
+    --cap-add NET_ADMIN \
+    --device /dev/net/tun \
+    -v {{ amneziawg_remote_directory }}/%i.conf:{{ amneziawg_remote_directory }}/%i.conf:ro \
+    -v /usr/local/bin/amneziawg-entrypoint.sh:/usr/local/bin/amneziawg-entrypoint.sh:ro \
+    {{ amneziawg_image }} \
+    /usr/local/bin/amneziawg-entrypoint.sh %i
+ExecStop=/usr/bin/docker stop -t 30 %i
+ExecStopPost=-/usr/bin/docker rm -f %i
+ExecReload=/usr/bin/docker exec %i bash -c 'awg syncconf %i <(awg-quick strip {{ amneziawg_remote_directory }}/%i.conf)'
+{% if amneziawg_postup is defined and amneziawg_postup | length > 0 %}
+{% for cmd in amneziawg_postup %}
+ExecStartPost=-/bin/sh -c '{{ cmd }}'
+{% endfor %}
+{% endif %}
+{% if amneziawg_predown is defined and amneziawg_predown | length > 0 %}
+{% for cmd in amneziawg_predown %}
+ExecStopPost=-/bin/sh -c '{{ cmd }}'
+{% endfor %}
+{% endif %}
+{% if amneziawg_postdown is defined and amneziawg_postdown | length > 0 %}
+{% for cmd in amneziawg_postdown %}
+ExecStopPost=-/bin/sh -c '{{ cmd }}'
+{% endfor %}
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

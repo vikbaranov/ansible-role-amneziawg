@@ -1,0 +1,59 @@
+---
+# tasks/peers.yml - Assemble peer list from inventory and unmanaged peers
+
+- name: Initialize managed peers dict
+  ansible.builtin.set_fact:
+    amneziawg__managed_peers: {}
+  tags:
+    - amneziawg-config
+
+- name: Build managed peers from inventory
+  ansible.builtin.set_fact:
+    amneziawg__managed_peers: >-
+      {{ amneziawg__managed_peers | combine({
+        host: {
+          'public_key': hostvars[host].amneziawg__fact_public_key | default(''),
+          'addresses': hostvars[host].amneziawg_addresses | default([]),
+          'allowed_ips': hostvars[host].amneziawg_allowed_ips | default(
+            hostvars[host].amneziawg_addresses | default([])
+            | map('regex_replace', '/\\d+$', '/32')
+            | join(', ')
+          ),
+          'endpoint': hostvars[host].amneziawg_endpoint | default(''),
+          'port': hostvars[host].amneziawg_port | default(amneziawg_port),
+          'preshared_key': hostvars[host].amneziawg_preshared_key | default(''),
+          'persistent_keepalive': hostvars[host].amneziawg_persistent_keepalive | default(''),
+          'as_spoke': hostvars[host].amneziawg_as_spoke | default(false)
+        }
+      }) }}
+  loop: "{{ ansible_play_hosts | default(groups['all'] | default([])) }}"
+  loop_control:
+    label: "{{ item }}"
+  vars:
+    host: "{{ item }}"
+  when:
+    - host != inventory_hostname
+    - hostvars[host].amneziawg__fact_public_key is defined
+    - hostvars[host].amneziawg__fact_public_key | length > 0
+  tags:
+    - amneziawg-config
+
+- name: Filter peers for spoke mode
+  when: amneziawg_as_spoke | bool
+  ansible.builtin.set_fact:
+    amneziawg__managed_peers: >-
+      {{ amneziawg__managed_peers | dict2items
+         | selectattr('value.endpoint', 'defined')
+         | selectattr('value.endpoint', 'ne', '')
+         | list | items2dict }}
+  tags:
+    - amneziawg-config
+
+- name: Merge unmanaged peers
+  ansible.builtin.set_fact:
+    amneziawg__all_peers: >-
+      {{ amneziawg__managed_peers | combine(
+        amneziawg_unmanaged_peers | default({})
+      ) }}
+  tags:
+    - amneziawg-config

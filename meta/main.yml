@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: amneziawg
+  author: vbaranov
+  description: Deploy AmneziaWG VPN via Docker
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  galaxy_tags:
+    - amneziawg
+    - vpn
+    - docker
+    - networking
+
+dependencies: []
