@@ -70,6 +70,10 @@ None.
         amneziawg_jc: 4
         amneziawg_jmin: 10
         amneziawg_jmax: 50
+        amneziawg_unmanaged_peers:
+          peer-01:
+            public_key: OauurYLmBw455R2Jlx050PDfoed5VnAvraYbuDPW0S0=
+            allowed_ips: 10.8.1.2/32
 ```
 
 ### Add a client
