@@ -6,14 +6,12 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 
 ## Features
 
-- Deploy AmneziaWG server in a Docker container with systemd supervision
+- Deploy AmneziaWG server in a Docker container with systemd
 - Automatic key generation and peer management
-- Support for both full-mesh and hub-and-spoke topologies
 - Client lifecycle management (add/remove with auto-generated configs)
 - Obfuscation parameter support (Jc, Jmin, Jmax, S1, S2, H1–H4)
 - Idempotent client operations
 - QR code generation for mobile clients
-- Server config hot-reload (container restart on peer changes)
 
 ## Requirements
 
