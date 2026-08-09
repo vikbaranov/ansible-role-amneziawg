@@ -22,6 +22,12 @@ S1 = {{ amneziawg_s1 }}
 {% if amneziawg_s2 | int > 0 %}
 S2 = {{ amneziawg_s2 }}
 {% endif %}
+{% if amneziawg_s3 | int > 0 %}
+S3 = {{ amneziawg_s3 }}
+{% endif %}
+{% if amneziawg_s4 | int > 0 %}
+S4 = {{ amneziawg_s4 }}
+{% endif %}
 {% if amneziawg_h1 | int > 0 or (amneziawg_h1 is string and '-' in amneziawg_h1) %}
 H1 = {{ amneziawg_h1 }}
 {% endif %}

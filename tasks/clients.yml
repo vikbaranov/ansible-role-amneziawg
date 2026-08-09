@@ -37,8 +37,23 @@
   tags:
     - amneziawg-clients
 
+- name: Check for existing client config
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
+  register: amneziawg__client_conf_stat
+  delegate_to: localhost
+  become: false
+  tags:
+    - amneziawg-clients
+
+- name: Determine if client config regeneration is needed
+  ansible.builtin.set_fact:
+    amneziawg__needs_regen: "{{ amneziawg_client_action == 'add' and amneziawg__client_exists and not amneziawg__client_conf_stat.stat.exists }}"
+  tags:
+    - amneziawg-clients
+
 - name: Generate client keys
-  when: not amneziawg__client_exists
+  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
   block:
     - name: Generate client private key
       ansible.builtin.command:
@@ -67,7 +82,7 @@
     - amneziawg-clients
 
 - name: Add new client to peers
-  when: not amneziawg__client_exists
+  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
   block:
     - name: Calculate used IPs
       ansible.builtin.set_fact:
@@ -75,6 +90,7 @@
           {{ amneziawg__peers | dict2items
              | map(attribute='value.allowed_ips')
              | list }}
+      when: not amneziawg__client_exists
       tags:
         - amneziawg-clients
 
@@ -83,7 +99,9 @@
         amneziawg__free_ips: >-
           {{ amneziawg__free_ips | default([]) + [_candidate_ip] }}
       loop: "{{ range(2, 255) | list }}"
-      when: _candidate_ip not in amneziawg__used_ips
+      when:
+        - not amneziawg__client_exists
+        - _candidate_ip not in amneziawg__used_ips
       vars:
         _candidate_ip: "{{ subnet_base }}.{{ item }}/32"
         subnet_base: "{{ (amneziawg_addresses[0] | regex_replace('\\.\\d+/\\d+$', '')) }}"
@@ -95,14 +113,25 @@
     - name: Set client address
       ansible.builtin.set_fact:
         amneziawg_client_address: "{{ amneziawg__free_ips | first }}"
-      when: amneziawg_client_address | default('') | length == 0
+      when:
+        - not amneziawg__client_exists
+        - amneziawg_client_address | default('') | length == 0
       tags:
         - amneziawg-clients
 
     - name: Check for address conflict
       ansible.builtin.fail:
         msg: "Address {{ amneziawg_client_address }} is already in use"
-      when: amneziawg_client_address in amneziawg__used_ips
+      when:
+        - not amneziawg__client_exists
+        - amneziawg_client_address in amneziawg__used_ips
+      tags:
+        - amneziawg-clients
+
+    - name: Preserve existing client address for regeneration
+      ansible.builtin.set_fact:
+        amneziawg_client_address: "{{ amneziawg__peers[amneziawg_client_name].allowed_ips }}"
+      when: amneziawg__needs_regen | default(false) | bool
       tags:
         - amneziawg-clients
 
@@ -188,7 +217,7 @@
     amneziawg__client_private_key: "{{ amneziawg__client_privkey.stdout }}"
     amneziawg__server_public_key: "{{ amneziawg__fact_public_key }}"
     amneziawg_client_address: "{{ amneziawg__peers[amneziawg_client_name].allowed_ips }}"
-  when: not amneziawg__client_exists
+  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
   tags:
     - amneziawg-clients
 
@@ -202,7 +231,7 @@
   become: false
   changed_when: false
   when:
-    - not amneziawg__client_exists
+    - not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
     - amneziawg_show_qr | bool
   tags:
     - amneziawg-clients
@@ -216,29 +245,12 @@
   tags:
     - amneziawg-clients
 
-- name: Warn if peer exists but config is missing
-  ansible.builtin.fail:
-    msg: |
-      Peer '{{ amneziawg_client_name }}' exists in awg-peers.yml but the config file
-      clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf is missing (private key is lost).
-
-      To regenerate, remove the peer first and re-add:
-        ansible-playbook playbooks/amneziawg.yml --limit {{ inventory_hostname }} \
-          -e "amneziawg_client_action=remove amneziawg_client_name={{ amneziawg_client_name }}" --tags amneziawg-clients
-
-        ansible-playbook playbooks/amneziawg.yml --limit {{ inventory_hostname }} \
-          -e "amneziawg_client_action=add amneziawg_client_name={{ amneziawg_client_name }}" --tags amneziawg-clients
-  when:
-    - amneziawg_client_action == 'add'
-    - amneziawg__client_exists
-    - not amneziawg__client_conf_stat.stat.exists
-  tags:
-    - amneziawg-clients
-
 - name: Client add summary
   ansible.builtin.debug:
     msg: |
-      {% if amneziawg__client_exists %}
+      {% if amneziawg__needs_regen | default(false) | bool %}
+      Client configuration regenerated!
+      {% elif amneziawg__client_exists %}
       Client '{{ amneziawg_client_name }}' already exists.
       {% else %}
       Client configuration generated!
@@ -250,7 +262,9 @@
       Client public key: {{ amneziawg__peers[amneziawg_client_name].public_key }}
 
       Peer file: host_vars/{{ inventory_hostname }}/awg-peers.yml
-  when: amneziawg__client_conf_stat.stat.exists
+  when:
+    - amneziawg_client_action == 'add'
+    - amneziawg__client_conf_stat.stat.exists
   tags:
     - amneziawg-clients
 
