@@ -10,6 +10,9 @@ amneziawg_client_name: ''
 amneziawg_client_address: ''        # auto-assigned from subnet if empty
 amneziawg_client_dns: '1.1.1.1'
 amneziawg_show_qr: false
+amneziawg_peers_file: >-
+  {{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml
+amneziawg_clients_dir: "{{ playbook_dir }}/../clients"
 
 # ── Uninstall options ───────────────────────────────────────────────
 amneziawg_remove_docker_image: true

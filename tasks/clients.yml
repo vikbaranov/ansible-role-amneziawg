@@ -15,11 +15,10 @@
 
 - name: Load existing peers file
   ansible.builtin.include_vars:
-    file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml"
+    file: "{{ amneziawg_peers_file }}"
     name: amneziawg__peers_data
   delegate_to: localhost
   become: false
-  failed_when: false
   tags:
     - amneziawg-clients
 
@@ -37,23 +36,8 @@
   tags:
     - amneziawg-clients
 
-- name: Check for existing client config
-  ansible.builtin.stat:
-    path: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
-  register: amneziawg__client_conf_stat
-  delegate_to: localhost
-  become: false
-  tags:
-    - amneziawg-clients
-
-- name: Determine if client config regeneration is needed
-  ansible.builtin.set_fact:
-    amneziawg__needs_regen: "{{ amneziawg_client_action == 'add' and amneziawg__client_exists and not amneziawg__client_conf_stat.stat.exists }}"
-  tags:
-    - amneziawg-clients
-
 - name: Generate client keys
-  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
+  when: not amneziawg__client_exists
   block:
     - name: Generate client private key
       ansible.builtin.command:
@@ -63,6 +47,7 @@
       register: amneziawg__client_privkey
       changed_when: false
       check_mode: false
+      no_log: true
       tags:
         - amneziawg-clients
 
@@ -76,13 +61,14 @@
       register: amneziawg__client_pubkey
       changed_when: false
       check_mode: false
+      no_log: true
       tags:
         - amneziawg-clients
   tags:
     - amneziawg-clients
 
 - name: Add new client to peers
-  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
+  when: not amneziawg__client_exists
   block:
     - name: Calculate used IPs
       ansible.builtin.set_fact:
@@ -128,13 +114,6 @@
       tags:
         - amneziawg-clients
 
-    - name: Preserve existing client address for regeneration
-      ansible.builtin.set_fact:
-        amneziawg_client_address: "{{ amneziawg__peers[amneziawg_client_name].allowed_ips }}"
-      when: amneziawg__needs_regen | default(false) | bool
-      tags:
-        - amneziawg-clients
-
     - name: Build updated peers dict
       ansible.builtin.set_fact:
         amneziawg__peers: >-
@@ -151,7 +130,7 @@
     - name: Write updated peers file
       ansible.builtin.template:
         src: awg-peers.yml.j2
-        dest: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml"
+        dest: "{{ amneziawg_peers_file }}"
         mode: '0644'
       delegate_to: localhost
       become: false
@@ -161,7 +140,7 @@
 
     - name: Reload server peer definitions
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml"
+        file: "{{ amneziawg_peers_file }}"
         name: amneziawg__peers_data
       tags:
         - amneziawg-clients
@@ -198,7 +177,7 @@
 
 - name: Ensure client directory exists
   ansible.builtin.file:
-    path: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}"
+    path: "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}"
     state: directory
     mode: '0700'
   delegate_to: localhost
@@ -209,62 +188,51 @@
 - name: Generate client configuration
   ansible.builtin.template:
     src: client.conf.j2
-    dest: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
+    dest: "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
     mode: '0600'
   delegate_to: localhost
   become: false
+  no_log: true
   vars:
     amneziawg__client_private_key: "{{ amneziawg__client_privkey.stdout }}"
     amneziawg__server_public_key: "{{ amneziawg__fact_public_key }}"
     amneziawg_client_address: "{{ amneziawg__peers[amneziawg_client_name].allowed_ips }}"
-  when: not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
+  when: not amneziawg__client_exists
   tags:
     - amneziawg-clients
 
 - name: Generate client QR code
   ansible.builtin.command:
     cmd: >
-      qrencode -o "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.png"
+      qrencode -o "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.png"
   args:
-    stdin: "{{ lookup('file', playbook_dir ~ '/../clients/' ~ amneziawg_client_name ~ '/' ~ amneziawg_client_name ~ '.conf') }}"
+    stdin: "{{ lookup('file', amneziawg_clients_dir ~ '/' ~ amneziawg_client_name ~ '/' ~ amneziawg_client_name ~ '.conf') }}"
   delegate_to: localhost
   become: false
   changed_when: false
   when:
-    - not amneziawg__client_exists or amneziawg__needs_regen | default(false) | bool
+    - not amneziawg__client_exists
     - amneziawg_show_qr | bool
-  tags:
-    - amneziawg-clients
-
-- name: Check for existing client config
-  ansible.builtin.stat:
-    path: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
-  register: amneziawg__client_conf_stat
-  delegate_to: localhost
-  become: false
   tags:
     - amneziawg-clients
 
 - name: Client add summary
   ansible.builtin.debug:
     msg: |
-      {% if amneziawg__needs_regen | default(false) | bool %}
-      Client configuration regenerated!
-      {% elif amneziawg__client_exists %}
+      {% if amneziawg__client_exists %}
       Client '{{ amneziawg_client_name }}' already exists.
       {% else %}
       Client configuration generated!
       {% endif %}
 
-      Config file: clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf
-      QR image: clients/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.png
+      Config file: {{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf
+      QR image: {{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.png
       Client address: {{ amneziawg__peers[amneziawg_client_name].allowed_ips }}
       Client public key: {{ amneziawg__peers[amneziawg_client_name].public_key }}
 
-      Peer file: host_vars/{{ inventory_hostname }}/awg-peers.yml
+      Peer file: {{ amneziawg_peers_file }}
   when:
     - amneziawg_client_action == 'add'
-    - amneziawg__client_conf_stat.stat.exists
   tags:
     - amneziawg-clients
 
@@ -287,7 +255,7 @@
     - name: Write updated peers file
       ansible.builtin.template:
         src: awg-peers.yml.j2
-        dest: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml"
+        dest: "{{ amneziawg_peers_file }}"
         mode: '0644'
       delegate_to: localhost
       become: false
@@ -297,7 +265,7 @@
 
     - name: Reload server peer definitions
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml"
+        file: "{{ amneziawg_peers_file }}"
         name: amneziawg__peers_data
       tags:
         - amneziawg-clients
@@ -332,7 +300,7 @@
 
     - name: Remove client directory
       ansible.builtin.file:
-        path: "{{ playbook_dir }}/../clients/{{ amneziawg_client_name }}"
+        path: "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}"
         state: absent
       delegate_to: localhost
       become: false
@@ -344,8 +312,8 @@
         msg: |
           Client '{{ amneziawg_client_name }}' removed.
 
-          Peer removed from: host_vars/{{ inventory_hostname }}/awg-peers.yml
-          Config directory deleted: clients/{{ amneziawg_client_name }}/
+          Peer removed from: {{ amneziawg_peers_file }}
+          Config directory deleted: {{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/
       tags:
         - amneziawg-clients
 
