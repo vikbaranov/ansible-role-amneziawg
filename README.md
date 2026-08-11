@@ -19,6 +19,12 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 - Docker on target host
 - `qrencode` on Ansible controller (for QR generation)
 
+### Native mode (Ubuntu only)
+- Ubuntu 20.04+ (focal, jammy, noble)
+- The role adds the `ppa:amnezia/ppa` repository automatically
+- Installs `amneziawg-dkms` (kernel module) and `amneziawg-tools`
+- Uses `awg-quick@<interface>` systemd unit (no Docker required)
+
 ## Role Variables
 
 ### Required
@@ -33,6 +39,7 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `amneziawg_state` | `present` | `present` or `absent` |
+| `amneziawg_install_method` | `docker` | `docker` or `native`. Native uses the Amnezia PPA (Ubuntu only). |
 | `amneziawg_endpoint` | — | Public endpoint hostname or IP |
 | `amneziawg_port` | `51820` | Listen port |
 | `amneziawg_interface` | `awg0` | Interface name |
@@ -76,6 +83,26 @@ None.
           peer-01:
             public_key: OauurYLmBw455R2Jlx050PDfoed5VnAvraYbuDPW0S0=
             allowed_ips: 10.8.1.2/32
+```
+
+### Server deployment (native, no Docker)
+
+```yaml
+---
+- hosts: vpn_servers
+  become: true
+  roles:
+    - role: amneziawg
+      vars:
+        amneziawg_install_method: native
+        amneziawg_addresses:
+          - "10.8.1.1/24"
+        amneziawg_endpoint: "vpn.example.com"
+        amneziawg_port: "51820"
+        amneziawg_private_key: "{{ vault_amneziawg_private_key }}"
+        amneziawg_jc: 4
+        amneziawg_jmin: 10
+        amneziawg_jmax: 50
 ```
 
 ### Add a client

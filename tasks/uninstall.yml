@@ -27,6 +27,7 @@
     - amneziawg-uninstall
 
 - name: Check if Docker container exists
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.command:
     cmd: docker container inspect {{ amneziawg_interface }}
   register: amneziawg__container_check
@@ -37,7 +38,9 @@
     - amneziawg-uninstall
 
 - name: Remove Docker container
-  when: amneziawg__container_check.rc == 0
+  when:
+    - amneziawg_install_method == 'docker'
+    - amneziawg__container_check.rc == 0
   ansible.builtin.command:
     cmd: docker rm -f {{ amneziawg_interface }}
   become: true
@@ -46,7 +49,9 @@
     - amneziawg-uninstall
 
 - name: Check if Docker image exists
-  when: amneziawg_remove_docker_image | bool
+  when:
+    - amneziawg_install_method == 'docker'
+    - amneziawg_remove_docker_image | bool
   ansible.builtin.command:
     cmd: docker image inspect {{ amneziawg_image }}
   register: amneziawg__remove_image_check
@@ -58,12 +63,46 @@
 
 - name: Remove Docker image
   when:
+    - amneziawg_install_method == 'docker'
     - amneziawg_remove_docker_image | bool
     - (amneziawg__remove_image_check.rc | default(1)) == 0
   ansible.builtin.command:
     cmd: docker rmi {{ amneziawg_image }}
   become: true
   changed_when: true
+  tags:
+    - amneziawg-uninstall
+
+# ── Native uninstall ─────────────────────────────────────────────
+- name: Stop AmneziaWG service (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
+    state: stopped
+    enabled: false
+  become: true
+  failed_when: false
+  tags:
+    - amneziawg-uninstall
+
+- name: Remove AmneziaWG packages
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.apt:
+    name:
+      - amneziawg
+      - amneziawg-dkms
+      - amneziawg-tools
+    state: absent
+  become: true
+  tags:
+    - amneziawg-uninstall
+
+- name: Remove Amnezia PPA
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.apt_repository:
+    repo: ppa:amnezia/ppa
+    state: absent
+  become: true
   tags:
     - amneziawg-uninstall
 

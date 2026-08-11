@@ -3,6 +3,7 @@
 
 # ── Role state ──────────────────────────────────────────────────────
 amneziawg_state: 'present'          # present | absent
+amneziawg_install_method: 'native'  # docker | native
 
 # ── Client management ───────────────────────────────────────────────
 amneziawg_client_action: ''         # add | remove | '' (server-only)

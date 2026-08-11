@@ -1,0 +1,10 @@
+---
+# tasks/native-systemd.yml - Enable native awg-quick systemd unit
+
+- name: Enable AmneziaWG service (native)
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
+    enabled: '{{ amneziawg_service_enabled }}'
+  become: true
+  tags:
+    - amneziawg-install

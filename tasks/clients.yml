@@ -36,10 +36,13 @@
   tags:
     - amneziawg-clients
 
-- name: Generate client keys
-  when: not amneziawg__client_exists
+- name: Generate client keys (docker)
+  when:
+    - amneziawg_client_action == 'add'
+    - not amneziawg__client_exists
+    - amneziawg_install_method == 'docker'
   block:
-    - name: Generate client private key
+    - name: Generate client private key (docker)
       ansible.builtin.command:
         cmd: >
           docker run --rm {{ amneziawg_image }}
@@ -51,7 +54,7 @@
       tags:
         - amneziawg-clients
 
-    - name: Derive client public key
+    - name: Derive client public key (docker)
       ansible.builtin.command:
         cmd: >
           docker run --rm -i {{ amneziawg_image }}
@@ -67,8 +70,40 @@
   tags:
     - amneziawg-clients
 
+- name: Generate client keys (native)
+  when:
+    - amneziawg_client_action == 'add'
+    - not amneziawg__client_exists
+    - amneziawg_install_method == 'native'
+  block:
+    - name: Generate client private key (native)
+      ansible.builtin.command:
+        cmd: awg genkey
+      register: amneziawg__client_privkey
+      changed_when: false
+      check_mode: false
+      no_log: true
+      tags:
+        - amneziawg-clients
+
+    - name: Derive client public key (native)
+      ansible.builtin.command:
+        cmd: awg pubkey
+      args:
+        stdin: "{{ amneziawg__client_privkey.stdout }}"
+      register: amneziawg__client_pubkey
+      changed_when: false
+      check_mode: false
+      no_log: true
+      tags:
+        - amneziawg-clients
+  tags:
+    - amneziawg-clients
+
 - name: Add new client to peers
-  when: not amneziawg__client_exists
+  when:
+    - amneziawg_client_action == 'add'
+    - not amneziawg__client_exists
   block:
     - name: Calculate used IPs
       ansible.builtin.set_fact:
@@ -165,9 +200,19 @@
       tags:
         - amneziawg-clients
 
-    - name: Restart AmneziaWG service
+    - name: Restart AmneziaWG service (docker)
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.systemd:
         name: 'amneziawg@{{ amneziawg_interface }}'
+        state: restarted
+      become: true
+      tags:
+        - amneziawg-clients
+
+    - name: Restart AmneziaWG service (native)
+      when: amneziawg_install_method == 'native'
+      ansible.builtin.systemd:
+        name: 'awg-quick@{{ amneziawg_interface }}'
         state: restarted
       become: true
       tags:
@@ -182,6 +227,9 @@
     mode: '0700'
   delegate_to: localhost
   become: false
+  when:
+    - amneziawg_client_action == 'add'
+    - not amneziawg__client_exists
   tags:
     - amneziawg-clients
 
@@ -197,7 +245,9 @@
     amneziawg__client_private_key: "{{ amneziawg__client_privkey.stdout }}"
     amneziawg__server_public_key: "{{ amneziawg__fact_public_key }}"
     amneziawg_client_address: "{{ amneziawg__peers[amneziawg_client_name].allowed_ips }}"
-  when: not amneziawg__client_exists
+  when:
+    - amneziawg_client_action == 'add'
+    - not amneziawg__client_exists
   tags:
     - amneziawg-clients
 
@@ -211,6 +261,7 @@
   become: false
   changed_when: false
   when:
+    - amneziawg_client_action == 'add'
     - not amneziawg__client_exists
     - amneziawg_show_qr | bool
   tags:
@@ -290,9 +341,19 @@
       tags:
         - amneziawg-clients
 
-    - name: Restart AmneziaWG service
+    - name: Restart AmneziaWG service (docker)
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.systemd:
         name: 'amneziawg@{{ amneziawg_interface }}'
+        state: restarted
+      become: true
+      tags:
+        - amneziawg-clients
+
+    - name: Restart AmneziaWG service (native)
+      when: amneziawg_install_method == 'native'
+      ansible.builtin.systemd:
+        name: 'awg-quick@{{ amneziawg_interface }}'
         state: restarted
       become: true
       tags:

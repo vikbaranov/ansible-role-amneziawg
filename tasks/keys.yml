@@ -8,8 +8,11 @@
     - amneziawg-keys
     - amneziawg-clients
 
-- name: Generate private key
-  when: not amneziawg__key_provided
+# ── Docker key generation ────────────────────────────────────────────
+- name: Generate private key (docker)
+  when:
+    - not amneziawg__key_provided
+    - amneziawg_install_method == 'docker'
   ansible.builtin.command:
     cmd: >
       docker run --rm {{ amneziawg_image }}
@@ -21,6 +24,21 @@
     - amneziawg-keys
     - amneziawg-clients
 
+# ── Native key generation ────────────────────────────────────────────
+- name: Generate private key (native)
+  when:
+    - not amneziawg__key_provided
+    - amneziawg_install_method == 'native'
+  ansible.builtin.command:
+    cmd: awg genkey
+  register: amneziawg__gen_privkey
+  changed_when: false
+  check_mode: false
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+# ── Common key handling ──────────────────────────────────────────────
 - name: Set private key fact (provided)
   when: amneziawg__key_provided
   ansible.builtin.set_fact:
@@ -39,11 +57,28 @@
     - amneziawg-keys
     - amneziawg-clients
 
-- name: Derive public key from private key
+# ── Docker pubkey derivation ─────────────────────────────────────────
+- name: Derive public key from private key (docker)
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.command:
     cmd: >
       docker run --rm -i {{ amneziawg_image }}
       awg pubkey
+  args:
+    stdin: "{{ amneziawg__fact_private_key }}"
+  register: amneziawg__gen_pubkey
+  changed_when: false
+  check_mode: false
+  no_log: true
+  tags:
+    - amneziawg-keys
+    - amneziawg-clients
+
+# ── Native pubkey derivation ─────────────────────────────────────────
+- name: Derive public key from private key (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.command:
+    cmd: awg pubkey
   args:
     stdin: "{{ amneziawg__fact_private_key }}"
   register: amneziawg__gen_pubkey

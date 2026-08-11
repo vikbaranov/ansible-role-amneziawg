@@ -1,7 +1,8 @@
 ---
 # tasks/service.yml - Manage AmneziaWG service state
 
-- name: Enable AmneziaWG service
+- name: Enable AmneziaWG service (docker)
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.systemd:
     name: 'amneziawg@{{ amneziawg_interface }}'
     enabled: '{{ amneziawg_service_enabled }}'
@@ -9,7 +10,8 @@
   tags:
     - amneziawg
 
-- name: Start AmneziaWG service
+- name: Start AmneziaWG service (docker)
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.systemd:
     name: 'amneziawg@{{ amneziawg_interface }}'
     state: '{{ amneziawg_service_state }}'
@@ -17,9 +19,42 @@
   tags:
     - amneziawg
 
-- name: Verify service is running
+- name: Verify service is running (docker)
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.command:
     cmd: systemctl is-active amneziawg@{{ amneziawg_interface }}
+  register: amneziawg__service_check
+  changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: amneziawg__service_check.rc == 0
+  become: true
+  tags:
+    - amneziawg
+
+- name: Enable AmneziaWG service (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
+    enabled: '{{ amneziawg_service_enabled }}'
+  become: true
+  tags:
+    - amneziawg
+
+- name: Start AmneziaWG service (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
+    state: '{{ amneziawg_service_state }}'
+  become: true
+  tags:
+    - amneziawg
+
+- name: Verify service is running (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.command:
+    cmd: systemctl is-active awg-quick@{{ amneziawg_interface }}
   register: amneziawg__service_check
   changed_when: false
   failed_when: false

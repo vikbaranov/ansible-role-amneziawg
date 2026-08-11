@@ -5,7 +5,22 @@
   ansible.builtin.assert:
     that:
       - amneziawg_state in ['present', 'absent']
-    fail_msg: "amneziawg_state must be 'present' or 'absent'"
+      - amneziawg_install_method in ['docker', 'native']
+    fail_msg: >-
+      amneziawg_state must be 'present' or 'absent',
+      amneziawg_install_method must be 'docker' or 'native'
+    quiet: true
+  tags:
+    - amneziawg
+
+- name: Validate native mode requirements
+  when:
+    - amneziawg_state == 'present'
+    - amneziawg_install_method == 'native'
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Ubuntu'
+    fail_msg: "amneziawg_install_method='native' requires Ubuntu (PPA is Ubuntu-only). Use 'docker' for other distributions."
     quiet: true
   tags:
     - amneziawg
@@ -23,7 +38,9 @@
       tags:
         - amneziawg-config
 
+    # ── Docker install path ──────────────────────────────────────────
     - name: Ensure Docker is available
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.include_tasks:
         file: docker.yml
       tags:
@@ -31,6 +48,7 @@
         - amneziawg-install
 
     - name: Ensure AmneziaWG image is available
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.include_tasks:
         file: image.yml
       tags:
@@ -38,6 +56,7 @@
         - amneziawg-install
 
     - name: Deploy AmneziaWG entrypoint
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.include_tasks:
         file: entrypoint.yml
       tags:
@@ -45,8 +64,26 @@
         - amneziawg-install
 
     - name: Deploy AmneziaWG systemd unit
+      when: amneziawg_install_method == 'docker'
       ansible.builtin.include_tasks:
         file: systemd.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    # ── Native install path ──────────────────────────────────────────
+    - name: Install AmneziaWG from PPA
+      when: amneziawg_install_method == 'native'
+      ansible.builtin.include_tasks:
+        file: native-install.yml
+      tags:
+        - amneziawg
+        - amneziawg-install
+
+    - name: Configure native systemd service
+      when: amneziawg_install_method == 'native'
+      ansible.builtin.include_tasks:
+        file: native-systemd.yml
       tags:
         - amneziawg
         - amneziawg-install

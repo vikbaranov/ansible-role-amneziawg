@@ -1,9 +1,18 @@
 ---
 # handlers/main.yml - AmneziaWG service handlers
 
-- name: Restart amneziawg
+- name: Restart amneziawg (docker)
+  when: amneziawg_install_method == 'docker'
   ansible.builtin.systemd:
     name: 'amneziawg@{{ amneziawg_interface }}'
+    state: restarted
+  become: true
+  listen: Reconfigure amneziawg
+
+- name: Restart amneziawg (native)
+  when: amneziawg_install_method == 'native'
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
     state: restarted
   become: true
   listen: Reconfigure amneziawg

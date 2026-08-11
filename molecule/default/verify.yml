@@ -1,0 +1,63 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Check configuration directory
+      ansible.builtin.stat:
+        path: /tmp/amneziawg
+      register: amneziawg__config_dir
+      tags:
+        - amneziawg-config
+
+    - name: Check interface configuration
+      ansible.builtin.stat:
+        path: /tmp/amneziawg/awg0.conf
+      register: amneziawg__config_file
+      tags:
+        - amneziawg-config
+
+    - name: Read interface configuration
+      ansible.builtin.slurp:
+        path: /tmp/amneziawg/awg0.conf
+      register: amneziawg__config
+      tags:
+        - amneziawg-config
+
+    - name: Read forwarding sysctl configuration
+      ansible.builtin.slurp:
+        path: /etc/sysctl.d/99-amneziawg-forward.conf
+      register: amneziawg__sysctl_config
+      tags:
+        - amneziawg-config
+
+    - name: Assert files and rendered values
+      ansible.builtin.assert:
+        that:
+          - amneziawg__config_dir.stat.isdir
+          - amneziawg__config_dir.stat.mode == '0700'
+          - amneziawg__config_file.stat.exists
+          - amneziawg__config_file.stat.mode == '0600'
+          - "'Address = 10.42.0.1/24' in amneziawg__config_text"
+          - "'ListenPort = 51820' in amneziawg__config_text"
+          - "'PrivateKey = test-private-key' in amneziawg__config_text"
+          - "'DNS = 1.1.1.1' in amneziawg__config_text"
+          - "'MTU = 1420' in amneziawg__config_text"
+          - "'Jc = 4' in amneziawg__config_text"
+          - "'H1 = -123456789' in amneziawg__config_text"
+          - "'# test-client' in amneziawg__config_text"
+          - "'PublicKey = test-client-public-key' in amneziawg__config_text"
+          - "'AllowedIPs = 10.42.0.2/32' in amneziawg__config_text"
+          - "'PersistentKeepalive = 25' in amneziawg__config_text"
+          - "'# test-spoke' in amneziawg__config_text"
+          - "'Endpoint = spoke.example.com:51821' in amneziawg__config_text"
+          - "'PersistentKeepalive = 15' in amneziawg__config_text"
+          - "'net.ipv4.ip_forward=1' in amneziawg__sysctl_text"
+          - "'net.ipv4.conf.all.src_valid_mark=1' in amneziawg__sysctl_text"
+        quiet: true
+      vars:
+        amneziawg__config_text: "{{ amneziawg__config.content | b64decode }}"
+        amneziawg__sysctl_text: "{{ amneziawg__sysctl_config.content | b64decode }}"
+      tags:
+        - amneziawg-config

@@ -1,0 +1,32 @@
+---
+# tasks/native-install.yml - Install AmneziaWG from official PPA
+
+- name: Install prerequisites for AmneziaWG PPA
+  ansible.builtin.apt:
+    name:
+      - software-properties-common
+      - gnupg2
+      - "linux-headers-{{ ansible_facts.kernel }}"
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - amneziawg-install
+
+- name: Add Amnezia PPA
+  ansible.builtin.apt_repository:
+    repo: ppa:amnezia/ppa
+    state: present
+    update_cache: false
+  become: true
+  tags:
+    - amneziawg-install
+
+- name: Install AmneziaWG packages
+  ansible.builtin.apt:
+    name: amneziawg
+    state: present
+    update_cache: true
+  become: true
+  tags:
+    - amneziawg-install

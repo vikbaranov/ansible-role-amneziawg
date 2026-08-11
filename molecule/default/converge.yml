@@ -1,0 +1,56 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    amneziawg_install_method: docker
+    amneziawg_service_state: stopped
+    amneziawg_addresses:
+      - 10.42.0.1/24
+    amneziawg_remote_directory: /tmp/amneziawg
+    amneziawg_dns: 1.1.1.1
+    amneziawg_mtu: 1420
+    amneziawg_jc: 4
+    amneziawg_h1: '-123456789'
+    amneziawg__fact_private_key: test-private-key
+    amneziawg_unmanaged_peers:
+      test-client:
+        public_key: test-client-public-key
+        allowed_ips: 10.42.0.2/32
+      test-spoke:
+        public_key: test-spoke-public-key
+        allowed_ips: 10.42.0.3/32
+        endpoint: spoke.example.com
+        port: 51821
+        persistent_keepalive: 15
+
+  pre_tasks:
+    - name: Install dummy AmneziaWG service for handler tests
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/amneziawg@.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Dummy AmneziaWG test service for %i
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStart=/bin/true
+
+          [Install]
+          WantedBy=multi-user.target
+      tags:
+        - always
+
+    - name: Reload systemd for dummy AmneziaWG service
+      ansible.builtin.systemd:
+        daemon_reload: true
+      tags:
+        - always
+
+  roles:
+    - role: vikbaranov.amneziawg
