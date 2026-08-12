@@ -2,11 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN server using a Docker container managed by systemd.
+An Ansible role to deploy and manage an [AmneziaWG](https://amnezia.org/) VPN server using either native packages or a Docker container.
 
 ## Features
 
-- Deploy AmneziaWG server in a Docker container with systemd
+- Deploy AmneziaWG server with native packages or Docker
 - Automatic key generation and peer management
 - Client lifecycle management (add/remove with auto-generated configs)
 - Obfuscation parameter support (Jc, Jmin, Jmax, S1–S4, H1–H4)
@@ -16,14 +16,28 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 ## Requirements
 
 - Ansible >= 2.14
-- Docker on target host
-- `qrencode` on Ansible controller (for QR generation)
+- Root privileges on the target host
+- `qrencode` on the Ansible controller only when `amneziawg_show_qr=true`
 
-### Native mode (Ubuntu only)
-- Ubuntu 20.04+ (focal, jammy, noble)
-- The role adds the `ppa:amnezia/ppa` repository automatically
-- Installs `amneziawg-dkms` (kernel module) and `amneziawg-tools`
-- Uses `awg-quick@<interface>` systemd unit (no Docker required)
+### Install modes
+
+| Mode | Default | Supported targets | Notes |
+|------|---------|-------------------|-------|
+| `native` | Yes | Ubuntu jammy/noble | Uses the Amnezia PPA and `awg-quick@<interface>` systemd unit. |
+| `docker` | No | Debian bullseye/bookworm, Ubuntu jammy/noble, RedHat-family hosts with Docker package availability | Installs Docker if missing and uses `amneziawg@<interface>` systemd unit. |
+
+### Native mode
+
+- Ubuntu only.
+- Adds `ppa:amnezia/ppa` automatically.
+- Installs `software-properties-common`, `gnupg2`, matching `linux-headers`, and the `amneziawg` package.
+- Does not require Docker.
+
+### Docker mode
+
+- Installs `docker.io` on Debian-family hosts or `docker` on RedHat-family hosts if Docker is missing.
+- Pulls `docker.io/amneziavpn/amneziawg-go` using `amneziawg_version`.
+- Runs the container through a systemd template unit.
 
 ## Role Variables
 
@@ -32,19 +46,42 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 | Variable | Description |
 |----------|-------------|
 | `amneziawg_addresses` | List of VPN IP addresses with CIDR (e.g. `["10.8.1.1/24"]`). Server address. |
-| `amneziawg_private_key` | Server private key. Auto-generated if empty. |
+
+`amneziawg_private_key` is optional and auto-generated when empty. For stable production deployments, set it explicitly and store it with Ansible Vault.
 
 ### Optional
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `amneziawg_state` | `present` | `present` or `absent` |
-| `amneziawg_install_method` | `docker` | `docker` or `native`. Native uses the Amnezia PPA (Ubuntu only). |
+| `amneziawg_install_method` | `native` | `native` or `docker`. Native uses the Amnezia PPA (Ubuntu only). |
 | `amneziawg_endpoint` | — | Public endpoint hostname or IP |
 | `amneziawg_port` | `51820` | Listen port |
 | `amneziawg_interface` | `awg0` | Interface name |
 | `amneziawg_version` | `v3.0.20260805` | Docker image version |
 | `amneziawg_as_spoke` | `false` | Hub-and-spoke mode |
+| `amneziawg_remote_directory` | `/etc/amnezia/amneziawg` | Remote configuration directory |
+| `amneziawg_service_enabled` | `true` | Enable the service at boot |
+| `amneziawg_service_state` | `started` | Desired service state |
+| `amneziawg_conf_backup` | `false` | Backup generated config before replacing it |
+
+### Interface options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `amneziawg_dns` | — | DNS value written to the server interface config |
+| `amneziawg_mtu` | — | MTU value written to the server interface config |
+| `amneziawg_fwmark` | — | FwMark value written to the server interface config |
+| `amneziawg_table` | — | Routing table value written to the server interface config |
+| `amneziawg_preup` | `[]` | List of `PreUp` commands written to the config |
+| `amneziawg_postup` | `[]` | Docker mode only: host `ExecStartPost` commands |
+| `amneziawg_predown` | `[]` | Docker mode only: host `ExecStopPost` commands run before post-down commands |
+| `amneziawg_postdown` | `[]` | Docker mode only: host `ExecStopPost` commands run after pre-down commands |
+
+### Obfuscation options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `amneziawg_jc` | `0` | Junk packet count |
 | `amneziawg_jmin` | `0` | Junk packet minimum size |
 | `amneziawg_jmax` | `0` | Junk packet maximum size |
@@ -54,6 +91,27 @@ An Ansible role to deploy and manage [AmneziaWG](https://amnezia.org/) VPN serve
 | `amneziawg_s4` | `0` | Junk packet S4 parameter |
 | `amneziawg_h1`–`h4` | `0` | Header obfuscation parameters (supports hyphenated ranges) |
 
+### Peer and client options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `amneziawg_unmanaged_peers` | `{}` | Static peer definitions rendered into the server config |
+| `amneziawg_preshared_key` | — | Optional PSK assigned to newly generated clients |
+| `amneziawg_client_action` | `''` | `add`, `remove`, or empty for server-only runs |
+| `amneziawg_client_name` | `''` | Client name for add/remove actions |
+| `amneziawg_client_address` | `''` | Client VPN address. Auto-assigned from the first server subnet when empty. |
+| `amneziawg_client_dns` | `1.1.1.1` | DNS value written to generated client configs |
+| `amneziawg_show_qr` | `false` | Generate a PNG QR code for new clients |
+| `amneziawg_peers_file` | `{{ playbook_dir }}/../host_vars/{{ inventory_hostname }}/awg-peers.yml` | Local file used to persist generated peers |
+| `amneziawg_clients_dir` | `{{ playbook_dir }}/../clients` | Local directory for generated client configs |
+
+### Uninstall options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `amneziawg_remove_docker_image` | `true` | Remove the Docker image during Docker uninstall |
+| `amneziawg_remove_configs` | `true` | Remove `amneziawg_remote_directory` during uninstall |
+
 See `defaults/main.yml` for the complete list.
 
 ## Dependencies
@@ -62,7 +120,7 @@ None.
 
 ## Example Playbook
 
-### Server deployment
+### Server deployment (native default)
 
 ```yaml
 ---
@@ -85,7 +143,7 @@ None.
             allowed_ips: 10.8.1.2/32
 ```
 
-### Server deployment (native, no Docker)
+### Server deployment (Docker)
 
 ```yaml
 ---
@@ -94,7 +152,7 @@ None.
   roles:
     - role: amneziawg
       vars:
-        amneziawg_install_method: native
+        amneziawg_install_method: docker
         amneziawg_addresses:
           - "10.8.1.1/24"
         amneziawg_endpoint: "vpn.example.com"
@@ -167,6 +225,31 @@ clients/<client_name>/
 ├── <client_name>.conf    # WireGuard config
 └── <client_name>.png     # QR code (if amneziawg_show_qr=true)
 ```
+
+Generated peers are persisted on the Ansible controller in `amneziawg_peers_file`. By default this is `../host_vars/<inventory_hostname>/awg-peers.yml` relative to the playbook directory. Keep this file under inventory management and encrypt sensitive values when needed.
+
+## Uninstall
+
+Set `amneziawg_state=absent` to remove the service and installed artifacts:
+
+```bash
+ansible-playbook playbook.yml \
+  -e "amneziawg_state=absent" \
+  --tags amneziawg-uninstall
+```
+
+By default uninstall also removes the Docker image in Docker mode and deletes `amneziawg_remote_directory`. Set `amneziawg_remove_docker_image=false` or `amneziawg_remove_configs=false` to keep them.
+
+## Tags
+
+| Tag | Purpose |
+|-----|---------|
+| `amneziawg` | Run all role tasks |
+| `amneziawg-install` | Install packages, image, entrypoint, and systemd units |
+| `amneziawg-config` | Render config, peers, forwarding, and service state |
+| `amneziawg-keys` | Generate or derive server keys |
+| `amneziawg-clients` | Add or remove clients |
+| `amneziawg-uninstall` | Remove AmneziaWG artifacts |
 
 ## License
 
