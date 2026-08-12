@@ -14,7 +14,7 @@
 
 - name: Deploy AmneziaWG configuration
   ansible.builtin.template:
-    src: awg.conf.j2
+    src: "{{ amneziawg_conf_template }}"
     dest: '{{ amneziawg_remote_directory }}/{{ amneziawg_interface }}.conf'
     owner: '{{ amneziawg_conf_owner }}'
     group: '{{ amneziawg_conf_group }}'

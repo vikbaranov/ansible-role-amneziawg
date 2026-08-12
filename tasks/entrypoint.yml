@@ -3,7 +3,7 @@
 
 - name: Deploy entrypoint script
   ansible.builtin.template:
-    src: amneziawg-entrypoint.sh.j2
+    src: "{{ amneziawg_entrypoint_template }}"
     dest: /usr/local/bin/amneziawg-entrypoint.sh
     owner: root
     group: root

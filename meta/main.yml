@@ -2,7 +2,7 @@
 galaxy_info:
   role_name: amneziawg
   author: vbaranov
-  description: Deploy AmneziaWG VPN via Docker
+  description: Deploy AmneziaWG VPN via native packages or Docker
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -14,6 +14,9 @@ galaxy_info:
       versions:
         - bullseye
         - bookworm
+    - name: EL
+      versions:
+        - all
   galaxy_tags:
     - amneziawg
     - vpn

@@ -1,5 +1,6 @@
 # Ansible Role: AmneziaWG
 
+[![CI](https://github.com/vikbaranov/ansible-role-amneziawg/actions/workflows/ci.yml/badge.svg)](https://github.com/vikbaranov/ansible-role-amneziawg/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An Ansible role to deploy and manage an [AmneziaWG](https://amnezia.org/) VPN server using either native packages or a Docker container.
@@ -113,6 +114,20 @@ An Ansible role to deploy and manage an [AmneziaWG](https://amnezia.org/) VPN se
 | `amneziawg_remove_configs` | `true` | Remove `amneziawg_remote_directory` during uninstall |
 
 See `defaults/main.yml` for the complete list.
+
+### Template overrides
+
+If exposed variables are not enough, override the templates used by the role:
+
+```yaml
+amneziawg_conf_template: awg.conf.j2
+amneziawg_client_conf_template: client.conf.j2
+amneziawg_peers_template: awg-peers.yml.j2
+amneziawg_systemd_template: amneziawg@.service.j2
+amneziawg_entrypoint_template: amneziawg-entrypoint.sh.j2
+```
+
+Set any of these to a playbook-local template path to customize rendering while keeping the role tasks unchanged.
 
 ## Dependencies
 
@@ -250,6 +265,24 @@ By default uninstall also removes the Docker image in Docker mode and deletes `a
 | `amneziawg-keys` | Generate or derive server keys |
 | `amneziawg-clients` | Add or remove clients |
 | `amneziawg-uninstall` | Remove AmneziaWG artifacts |
+
+## Development and testing
+
+Run the default Molecule scenario from the role root:
+
+```bash
+molecule test
+```
+
+For focused iteration:
+
+```bash
+molecule converge
+molecule verify
+molecule destroy
+```
+
+The default scenario uses Docker mode, `amneziawg_service_state: stopped`, `/tmp/amneziawg` as the remote config directory, and the `amneziawg-config` tag. It verifies rendered configuration and sysctl files, not package installation or real service startup.
 
 ## License
 

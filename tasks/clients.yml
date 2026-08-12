@@ -164,7 +164,7 @@
 
     - name: Write updated peers file
       ansible.builtin.template:
-        src: awg-peers.yml.j2
+        src: "{{ amneziawg_peers_template }}"
         dest: "{{ amneziawg_peers_file }}"
         mode: '0644'
       delegate_to: localhost
@@ -190,7 +190,7 @@
 
     - name: Deploy server configuration
       ansible.builtin.template:
-        src: awg.conf.j2
+        src: "{{ amneziawg_conf_template }}"
         dest: '{{ amneziawg_remote_directory }}/{{ amneziawg_interface }}.conf'
         owner: '{{ amneziawg_conf_owner }}'
         group: '{{ amneziawg_conf_group }}'
@@ -235,7 +235,7 @@
 
 - name: Generate client configuration
   ansible.builtin.template:
-    src: client.conf.j2
+    src: "{{ amneziawg_client_conf_template }}"
     dest: "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.conf"
     mode: '0600'
   delegate_to: localhost
@@ -256,7 +256,8 @@
     cmd: >
       qrencode -o "{{ amneziawg_clients_dir }}/{{ amneziawg_client_name }}/{{ amneziawg_client_name }}.png"
   args:
-    stdin: "{{ lookup('file', amneziawg_clients_dir ~ '/' ~ amneziawg_client_name ~ '/' ~ amneziawg_client_name ~ '.conf') }}"
+    stdin: >-
+      {{ lookup('file', amneziawg_clients_dir ~ '/' ~ amneziawg_client_name ~ '/' ~ amneziawg_client_name ~ '.conf') }}
   delegate_to: localhost
   become: false
   changed_when: false
@@ -305,7 +306,7 @@
 
     - name: Write updated peers file
       ansible.builtin.template:
-        src: awg-peers.yml.j2
+        src: "{{ amneziawg_peers_template }}"
         dest: "{{ amneziawg_peers_file }}"
         mode: '0644'
       delegate_to: localhost
@@ -331,7 +332,7 @@
 
     - name: Deploy server configuration
       ansible.builtin.template:
-        src: awg.conf.j2
+        src: "{{ amneziawg_conf_template }}"
         dest: '{{ amneziawg_remote_directory }}/{{ amneziawg_interface }}.conf'
         owner: '{{ amneziawg_conf_owner }}'
         group: '{{ amneziawg_conf_group }}'

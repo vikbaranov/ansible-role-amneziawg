@@ -15,7 +15,7 @@
     - amneziawg__docker_check.rc != 0
     - ansible_os_family == 'Debian'
   ansible.builtin.apt:
-    name: docker.io
+    name: "{{ amneziawg_docker_package_name }}"
     state: present
     update_cache: true
   become: true
@@ -27,7 +27,7 @@
     - amneziawg__docker_check.rc != 0
     - ansible_os_family == 'RedHat'
   ansible.builtin.dnf:
-    name: docker
+    name: "{{ amneziawg_docker_package_name }}"
     state: present
   become: true
   tags:
@@ -35,7 +35,7 @@
 
 - name: Ensure Docker service is running
   ansible.builtin.systemd:
-    name: docker
+    name: "{{ amneziawg_docker_service_name }}"
     state: started
     enabled: true
   become: true
