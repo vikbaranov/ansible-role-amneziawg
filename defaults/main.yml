@@ -32,6 +32,13 @@ amneziawg_conf_group: 'root'
 amneziawg_conf_mode: '0600'
 amneziawg_conf_backup: false
 
+# -- Template overrides -------------------------------------------------
+amneziawg_conf_template: awg.conf.j2
+amneziawg_client_conf_template: client.conf.j2
+amneziawg_peers_template: awg-peers.yml.j2
+amneziawg_systemd_template: amneziawg@.service.j2
+amneziawg_entrypoint_template: amneziawg-entrypoint.sh.j2
+
 # ── Service settings ────────────────────────────────────────────────
 amneziawg_service_enabled: true
 amneziawg_service_state: 'started'

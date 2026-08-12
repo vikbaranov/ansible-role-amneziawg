@@ -15,7 +15,9 @@
   ansible.builtin.command:
     cmd: docker pull {{ amneziawg_image }}
   register: amneziawg__pull_result
-  changed_when: "'Downloaded newer image' in amneziawg__pull_result.stdout or 'Pull complete' in amneziawg__pull_result.stdout"
+  changed_when: >-
+    'Downloaded newer image' in amneziawg__pull_result.stdout
+    or 'Pull complete' in amneziawg__pull_result.stdout
   become: true
   tags:
     - amneziawg-install

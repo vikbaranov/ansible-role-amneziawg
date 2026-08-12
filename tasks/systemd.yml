@@ -3,7 +3,7 @@
 
 - name: Deploy systemd service template
   ansible.builtin.template:
-    src: amneziawg@.service.j2
+    src: "{{ amneziawg_systemd_template }}"
     dest: /etc/systemd/system/amneziawg@.service
     owner: root
     group: root
