@@ -21,14 +21,12 @@
 
 - name: Verify service is running (docker)
   when: amneziawg_install_method == 'docker'
-  ansible.builtin.command:
-    cmd: systemctl is-active amneziawg@{{ amneziawg_interface }}
+  ansible.builtin.systemd:
+    name: 'amneziawg@{{ amneziawg_interface }}'
   register: amneziawg__service_check
-  changed_when: false
-  failed_when: false
   retries: 3
   delay: 5
-  until: amneziawg__service_check.rc == 0
+  until: amneziawg__service_check.status.ActiveState == 'active'
   become: true
   tags:
     - amneziawg
@@ -53,14 +51,12 @@
 
 - name: Verify service is running (native)
   when: amneziawg_install_method == 'native'
-  ansible.builtin.command:
-    cmd: systemctl is-active awg-quick@{{ amneziawg_interface }}
+  ansible.builtin.systemd:
+    name: 'awg-quick@{{ amneziawg_interface }}'
   register: amneziawg__service_check
-  changed_when: false
-  failed_when: false
   retries: 3
   delay: 5
-  until: amneziawg__service_check.rc == 0
+  until: amneziawg__service_check.status.ActiveState == 'active'
   become: true
   tags:
     - amneziawg

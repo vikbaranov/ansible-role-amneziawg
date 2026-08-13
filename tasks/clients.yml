@@ -41,6 +41,8 @@
     - amneziawg_client_action == 'add'
     - not amneziawg__client_exists
     - amneziawg_install_method == 'docker'
+  tags:
+    - amneziawg-clients
   block:
     - name: Generate client private key (docker)
       ansible.builtin.command:
@@ -67,14 +69,14 @@
       no_log: true
       tags:
         - amneziawg-clients
-  tags:
-    - amneziawg-clients
 
 - name: Generate client keys (native)
   when:
     - amneziawg_client_action == 'add'
     - not amneziawg__client_exists
     - amneziawg_install_method == 'native'
+  tags:
+    - amneziawg-clients
   block:
     - name: Generate client private key (native)
       ansible.builtin.command:
@@ -97,13 +99,13 @@
       no_log: true
       tags:
         - amneziawg-clients
-  tags:
-    - amneziawg-clients
 
 - name: Add new client to peers
   when:
     - amneziawg_client_action == 'add'
     - not amneziawg__client_exists
+  tags:
+    - amneziawg-clients
   block:
     - name: Calculate used IPs
       ansible.builtin.set_fact:
@@ -217,8 +219,6 @@
       become: true
       tags:
         - amneziawg-clients
-  tags:
-    - amneziawg-clients
 
 - name: Ensure client directory exists
   ansible.builtin.file:
