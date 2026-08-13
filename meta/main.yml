@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: amneziawg
-  author: vbaranov
+  author: vikbaranov
   description: Deploy AmneziaWG VPN via native packages or Docker
   license: MIT
   min_ansible_version: "2.14"
